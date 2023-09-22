@@ -1,0 +1,134 @@
+# DESCRIPTION
+# This aws-nuke configuration is meant as example
+# DO NOT USE THIS in your environment before making adjustments and testing
+
+feature-flags:
+  disable-deletion-protection:
+    RDSInstance: true
+    EC2Instance: true
+    CloudformationStack: true
+  force-delete-lightsail-addons: true
+
+regions:
+  - global
+  - eu-west-1
+  - eu-central-1
+  - us-east-1
+  - ap-northeast-1
+  - ap-northeast-2
+  - ap-southeast-1
+  - ap-southeast-2
+
+account-blocklist:
+  # Masters
+  - 123456789012
+  # Operations
+  - 987654321012
+
+resource-types:
+  # These types of resources are excluded
+  excludes:
+    - EC2TGWAttachment
+    - EC2TGW
+    - Route53ResolverRule
+    - EC2VPNGateway
+    - EC2VPNGatewayAttachment
+    - SecurityHub
+    - WAFv2WebACL
+    - ConfigServiceConfigRule
+    - ConfigServiceDeliveryChannel
+    - ConfigServiceConfigurationRecorder
+    - AccessAnalyzer
+    - WAFRegionalWebACL
+    - GuardDutyDetector
+
+accounts:
+  { account_id }:
+    presets:
+      - 'terraform'
+      - 'aws-default'
+
+# Use Presets
+presets:
+  terraform:
+    filters:
+      S3Bucket:
+        - type: contains
+          value: 'tf-state'
+      DynamoDBTable:
+        - type: contains
+          value: 'terraform'
+  governance:
+    filters:
+      IAMUser:
+        - property: Name
+          type: glob
+          value: 'prefix-*'
+      CloudWatchLogsLogGroup:
+        - type: contains
+          value: '/prefix/'
+      CloudTrailTrail:
+        - type: glob
+          value: 'prefix-*'
+      CloudFormationStack:
+        - type: glob
+          value: 'StackSet-prefix*'
+      Route53HostedZone:
+        - property: Name
+          type: glob
+          value: '*.prefix.'
+      Route53ResourceRecordSet:
+        - property: Name
+          type: glob
+          value: '*.prefix.'
+      IAMRole:
+        - property: Name
+          type: glob
+          value: 'AWS*'
+        - property: Path
+          value: '/prefix/'
+        - property: Name
+          type: glob
+          value: 'StackSet-prefix*'
+        - property: Name
+          type: glob
+          value: 'stacksets-exec*'
+        - 'CustomRoleToExclude'
+        - 'OrganizationAccountAccessRole'
+      IAMRolePolicy:
+        - property: role:RoleName
+          type: glob
+          value: 'StackSet-prefix*'
+        - property: role:Path
+          value: '/prefix/'
+        - 'OrganizationAccountAccessRole -> AdministratorAccess'
+      IAMRolePolicyAttachment:
+        - property: RoleName
+          type: glob
+          value: 'AWS*'
+        - property: RoleName
+          type: glob
+          value: 'StackSet-prefix*'
+        - property: RoleName
+          type: glob
+          value: 'stacksets-prefix*'
+        - 'FlowLogs -> AWSTransferLoggingAccess'
+        - 'OrganizationAccountAccessRole -> AdministratorAccess'
+  aws-default:
+    filters:
+      IAMRole:
+        - property: Path
+          type: contains
+          value: '/aws-service-role/'
+      IAMRolePolicyAttachment:
+        - property: PolicyArn
+          type: contains
+          value: '/aws-service-role/'
+      ElasticacheCacheParameterGroup:
+        - property: GroupName
+          type: contains
+          value: 'default'
+      KMSAlias:
+        - property: Name
+          type: glob
+          value: '*/aws/*'
